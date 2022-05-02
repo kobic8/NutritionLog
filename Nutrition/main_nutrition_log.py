@@ -71,6 +71,10 @@ def read_food_dict():
 
 
 def init_daily_log(date):
+    """
+        This procedure creates an empty worksheet related to a specific date, with its related headers.
+
+    """
     import openpyxl as xls
     workbook = xls.load_workbook(filename)
     sheet = workbook.create_sheet(date)
@@ -82,6 +86,57 @@ def init_daily_log(date):
     workbook.save(filename)
     workbook.close()
 
+
+def read_daily_log(date):
+    """
+    The procedure reads the nutritional data of the foods and returns list of food names and values
+    Returns
+    -------
+    food_names [list]: list of food names
+    food_dict [dict]:  key = food name and value = {Amount, Units, Calories, Protein, Carbs, Fat}
+    """
+    import pandas as pd
+    import openpyxl as xls
+    from tabulate import tabulate
+    workbook = xls.load_workbook(filename)
+    # ASSUME: the food dictionary exists, what if not? try-except?
+    if date not in workbook.get_sheet_names():
+        init_daily_log(date)
+        return None
+    else:
+        workbook.close()
+        food_reads = pd.read_excel(filename, sheet_name=date, skiprows=6)
+        print(tabulate(food_reads))
+        # example to add first row of food (Bread)
+        added_food = 'Bread'
+        row = {'Food': added_food}
+        row.update(food_dict[added_food])
+        # add the row to pandas dataframe
+        new_table = food_reads.append(row, ignore_index=True)
+        print(tabulate(new_table))
+    return new_table
+
+
+def update_food_log(date, food_df):
+    from openpyxl import load_workbook
+    import pandas as pd
+    workbook = load_workbook(filename)
+    sheet = workbook.create_sheet(date)
+    values_to_update = [date] + list(current_measures.values())
+    row = 1
+    col = 'B'
+    for value in values_to_update:
+        sheet[col + str(row)] = value
+        row += 1
+    workbook.save(filename)
+    workbook.close()
+
+    # --- TRIAL FAILED: OPENPYXL
+    writer = pd.ExcelWriter(filename, engine="openpyxl", mode='a', if_sheet_exists='overlay')
+    writer.book = load_workbook(filename)
+    food_df.to_excel(writer, sheet_name=date, startrow=6+4)
+    writer.save()
+    writer.close()
 
 def init_draft():
     from datetime import datetime
