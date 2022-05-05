@@ -81,6 +81,7 @@ def init_daily_log(date):
     headers = ['Last Updated', '', 'Balance', 'Total Consumed', 'Total Burned', '']
     for header in headers:
         sheet.append([header])
+    sheet['B3'] = '=B4-B5'  # formula for caloric balance
     headers = ['Food', 'Amount', 'Unit', 'Calories', 'Protein', 'Carbs', 'Fats']
     sheet.append(headers)
     workbook.save(filename)
@@ -89,54 +90,70 @@ def init_daily_log(date):
 
 def read_daily_log(date):
     """
-    The procedure reads the nutritional data of the foods and returns list of food names and values
+    The procedure checks if there is logged data for a given date. In case not, it creates an empty sheet for that day.
     Returns
     -------
-    food_names [list]: list of food names
-    food_dict [dict]:  key = food name and value = {Amount, Units, Calories, Protein, Carbs, Fat}
+    food_reads [pandas df]: table of daily food log
     """
     import pandas as pd
     import openpyxl as xls
     from tabulate import tabulate
     workbook = xls.load_workbook(filename)
-    # ASSUME: the food dictionary exists, what if not? try-except?
+    # ASSUME: the food log exists, what if not? try-except?
     if date not in workbook.get_sheet_names():
         init_daily_log(date)
-        return None
+        return None  # or 0
     else:
         workbook.close()
         food_reads = pd.read_excel(filename, sheet_name=date, skiprows=6)
         print(tabulate(food_reads))
-        # example to add first row of food (Bread)
-        added_food = 'Bread'
-        row = {'Food': added_food}
-        row.update(food_dict[added_food])
-        # add the row to pandas dataframe
-        new_table = food_reads.append(row, ignore_index=True)
-        print(tabulate(new_table))
-    return new_table
+    return food_reads
 
 
-def update_food_log(date, food_df):
+def create_rwo_to_add(added_food, amount):
+    food_data = food_dict[added_food]
+    row_to_add = list(food_data.values())
+    factor = amount / (food_data['Amount'])
+    row_to_add = [added_food] + ["{:.2f}".format(factor * value) if type(value) is float else value for value in row_to_add]
+    return row_to_add
+
+
+def update_food_log(date, row_to_add, startrow=8):
     from openpyxl import load_workbook
     import pandas as pd
     workbook = load_workbook(filename)
-    sheet = workbook.create_sheet(date)
-    values_to_update = [date] + list(current_measures.values())
-    row = 1
-    col = 'B'
-    for value in values_to_update:
-        sheet[col + str(row)] = value
-        row += 1
+    sheet = workbook[date]
+    cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+    for col, value in zip(cols, row_to_add):
+        sheet[col+str(startrow)] = value
     workbook.save(filename)
     workbook.close()
 
-    # --- TRIAL FAILED: OPENPYXL
-    writer = pd.ExcelWriter(filename, engine="openpyxl", mode='a', if_sheet_exists='overlay')
-    writer.book = load_workbook(filename)
-    food_df.to_excel(writer, sheet_name=date, startrow=6+4)
-    writer.save()
-    writer.close()
+
+def sum_daily_log(date):
+    food_reads = read_daily_log(date)
+    headers = ['Protein', 'Carbs', 'Fats']
+    total_df = food_reads.sum(axis=0)
+    total_values = dict()
+    for key in headers:
+        total_values[key] = total_df[key]
+    total_consumed = total_df['Calories']
+    return total_consumed, total_values
+
+
+def update_total_calories(date, consumed, burned=0):
+    from openpyxl import load_workbook
+    from datetime import datetime
+    workbook = load_workbook(filename)
+    sheet = workbook[date]
+    sheet['B1'] = datetime.now().strftime("%B %d %Y %H:%M")
+    if consumed:
+        sheet['B4'] = consumed
+    if burned:
+        sheet['B5'] = burned
+    workbook.save(filename)
+    workbook.close()
+
 
 def init_draft():
     from datetime import datetime
@@ -229,5 +246,15 @@ if __name__ == '__main__':
     food_dict, food_name_list = read_food_dict()
     update_date = datetime.now().strftime("%B %d %Y %H:%M")
     date = update_date.split(' 2022')[0]
+    date = 'May 01'
     init_daily_log(date)
+    startrow = 8
 
+    added_food = 'Bread'
+    amount = 3
+    food_reads = read_daily_log(date)
+    new_row = create_rwo_to_add(added_food, amount)
+    startrow += len(food_reads)
+
+    consumed = 2200
+    burned = 2900
