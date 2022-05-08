@@ -105,11 +105,9 @@ if __name__ == '__main__':
             date = get_date()
             save_date = st.form_submit_button(f"Save: {date}")
         # if save_date:
-        count = 0
         startrow = 8
         daily_log_df = nut.read_daily_log(filename, date)
         if daily_log_df is not None:
-            count = 0
             startrow += len(daily_log_df)
             total_cal, updated = nut.get_total_calories(filename, date)
             st.info(f"Data for {date} was last updated on: {updated}")
@@ -121,8 +119,8 @@ if __name__ == '__main__':
         # while done_button is False:
         with st.form("Add Food"):
             save_date = False
-            food = []
-            amount = []
+            food = False
+            amount = False
             food = st.selectbox("What did you eat", food_names)
             if food:
                 units = food_dict[food]['Unit']
@@ -137,20 +135,17 @@ if __name__ == '__main__':
                 update = nut.update_food_log(filename, date, row_to_add, startrow)
                 daily_log_df = nut.read_daily_log(filename, date)
                 startrow += 1
-                st.text(f"number of items before: {count}")
-                count += 1
-                st.text(f"number of items: {count}")
+
                 st.text(f"row is: {startrow}")
-                st.dataframe(daily_log_df.iloc[-count:])
+                st.dataframe(daily_log_df)
                 if update:
                     st.success("Dataset is updated")
             next_button = st.form_submit_button("Next")
             if next_button:
-                food = []
-                amount = []
-                units = []
-                save = []
-                # count += 1
+                food = False
+                amount = False
+                units = False
+                save = False
 
         done_button = st.checkbox("Done")
         # burned = 0
@@ -165,6 +160,7 @@ if __name__ == '__main__':
             get_burned = False
             burned = False
             with st.form("Calories burned"):
+                # TODO: use update burned as another option
                 burned = st.text_input(f"Update total calories burned on {date}")
                 if burned:
                     burned = float(burned)
