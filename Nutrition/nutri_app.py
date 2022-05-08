@@ -42,7 +42,7 @@ def present_day(filename, date):
     # st.text(headers)
     ax.pie(values, labels=headers, autopct='%1.1f%%')
     ax.axis('equal')
-    ax.set_title(f" Total of {total_consumed} calories consumed for: {date} ")
+    ax.set_title(f' Total of {"{:.2f}".format(total_consumed)} calories consumed for: {date} ')
     st.pyplot(fig)
 
     # values = [value for value in total_calories.values()]
@@ -98,22 +98,29 @@ if __name__ == '__main__':
 
     if action == "Update my day":
         # get date to edit
+        save_date = False
+        daily_log_df = None
+        food_names, food_dict = nut.read_food_dict()
         with st.form("Choose date to view"):
             date = get_date()
             save_date = st.form_submit_button(f"Save: {date}")
-
-        food_names, food_dict = nut.read_food_dict()
+        # if save_date:
         count = 0
         startrow = 8
         daily_log_df = nut.read_daily_log(filename, date)
         if daily_log_df is not None:
-            count = len(daily_log_df) - startrow
             count = 0
             startrow += len(daily_log_df)
+            total_cal, updated = nut.get_total_calories(filename, date)
+            st.info(f"Data for {date} was last updated on: {updated}")
+            st.info(f"Total calories consumed so far: {total_cal['consumed']}")
+        else:
+            st.info(f"No data is updated for {date} so far, hence, new xls sheet is added.")
 
         done_button = False
         # while done_button is False:
         with st.form("Add Food"):
+            save_date = False
             food = []
             amount = []
             food = st.selectbox("What did you eat", food_names)
@@ -148,6 +155,9 @@ if __name__ == '__main__':
         done_button = st.checkbox("Done")
         # burned = 0
         if done_button:
+            save_date = False
+            food = False
+            amount = False
             refresh = False
             done_burned_button = False
             update_cal = False
