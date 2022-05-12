@@ -79,12 +79,14 @@ if __name__ == '__main__':
     st.header("What would you like to do today?")
     action = st.radio("Please choose your action", ("View my day", "Update my day", "Update my measures"))
     if action == "Update my measures":
+        # TODO change the way input measures to read weight and circumference change in time to plot a graph
         measures_input = None
         measures_input = get_measures_from_user()
         if measures_input is not None:
             nut.update_worksheet_measures(filename, measures_input)
             st.success("Dataset is updated")
         st.text(measures_input)
+
     if action == "View my day":
         save_date = False
         with st.form("Choose date to view"):
@@ -112,12 +114,14 @@ if __name__ == '__main__':
             total_cal, updated = nut.get_total_calories(filename, date)
             st.info(f"Data for {date} was last updated on: {updated}")
             st.info(f"Total calories consumed so far: {total_cal['consumed']}")
+            st.dataframe(daily_log_df)
         else:
             st.info(f"No data is updated for {date} so far, hence, new xls sheet is added.")
 
         done_button = False
         # while done_button is False:
         with st.form("Add Food"):
+            # TODO add an option to EDIT a row in the table or DELETE
             save_date = False
             food = False
             amount = False
@@ -161,10 +165,13 @@ if __name__ == '__main__':
             burned = False
             with st.form("Calories burned"):
                 # TODO: use update burned as another option
-                burned = st.text_input(f"Update total calories burned on {date}")
+                total_cal, updated = nut.get_total_calories(filename, date)
+                burned = st.text_input(f"{total_cal['burned']} calories burned on {date}, click to update")
                 if burned:
                     burned = float(burned)
                     st.text(f"get burned is: {burned}")
+                else:
+                    burned = total_cal['burned']
                 refresh = st.form_submit_button('Refresh')
                 if refresh:
                     st.text(f"Burned: {burned}")
@@ -199,4 +206,7 @@ if __name__ == '__main__':
             # refresh = False
             # update_cal = False
 
+    if action == "trace caloric consumption in time":
+
+        # TODO take as input: start/end date and scan sheet names in range and read total calories to graph
 
